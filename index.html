@@ -10,14 +10,16 @@
             background-color: #f0f0f0;
             text-align: center;
             padding: 50px;
+            transition: background-color 0.3s, color 0.3s;
         }
-        #exchange-rate {
+        #exchange-rate, #live-rates {
             background-color: #ffffff;
             padding: 20px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             display: inline-block;
             margin-top: 20px;
+            transition: background-color 0.3s, color 0.3s;
         }
         select, input {
             padding: 10px;
@@ -29,17 +31,30 @@
             font-size: 16px;
             cursor: pointer;
         }
+        .dark-mode {
+            background-color: #333333;
+            color: #ffffff;
+        }
+        .dark-mode #exchange-rate, .dark-mode #live-rates {
+            background-color: #444444;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
-    <h1>Aktuální Měnové Kurzy</h1>
+    <h1>Měnové Kurzy</h1>
     <div>
         <input type="number" id="amount" placeholder="Zadejte částku" value="1">
         <select id="from-currency"></select>
         <select id="to-currency"></select>
         <button onclick="convertCurrency()">Převést</button>
+        <button onclick="toggleDarkMode()">Přepnout Dark Mode</button>
     </div>
     <div id="exchange-rate">
+        <p>Zadejte částku a měny k převodu.</p>
+    </div>
+    <div id="live-rates">
+        <h2>Live Kurzy</h2>
         <p>Načítání...</p>
     </div>
     <script>
@@ -48,13 +63,18 @@
         let exchangeRates = {};
 
         document.addEventListener('DOMContentLoaded', function() {
+            fetchExchangeRates();
+            setInterval(fetchExchangeRates, 5000);  // Aktualizace každých 5 sekund
+        });
+
+        function fetchExchangeRates() {
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     if (data.result === "success") {
                         exchangeRates = data.conversion_rates;
                         populateCurrencySelect();
-                        document.getElementById('exchange-rate').innerHTML = '<p>Zadejte částku a měny k převodu.</p>';
+                        updateLiveRates();
                     } else {
                         alert('Nepodařilo se načíst data. Zkontrolujte svůj API klíč.');
                     }
@@ -63,11 +83,13 @@
                     console.error('Chyba při načítání dat:', error);
                     alert('Nastala chyba při načítání dat.');
                 });
-        });
+        }
 
         function populateCurrencySelect() {
             const fromCurrency = document.getElementById('from-currency');
             const toCurrency = document.getElementById('to-currency');
+            fromCurrency.innerHTML = '';
+            toCurrency.innerHTML = '';
             for (const currency in exchangeRates) {
                 const optionFrom = document.createElement('option');
                 optionFrom.value = currency;
@@ -81,6 +103,15 @@
             }
             fromCurrency.value = 'USD';
             toCurrency.value = 'CZK';
+        }
+
+        function updateLiveRates() {
+            const liveRatesDiv = document.getElementById('live-rates');
+            let html = '<h2>Live Kurzy</h2>';
+            for (const currency in exchangeRates) {
+                html += `<p>1 USD = ${exchangeRates[currency]} ${currency}</p>`;
+            }
+            liveRatesDiv.innerHTML = html;
         }
 
         function convertCurrency() {
@@ -111,8 +142,7 @@
                 toCurrency: toCurrency,
                 convertedAmount: convertedAmount.toFixed(2)
             };
-            const apiID = '#api';
-            fetch(apiID, {
+            fetch('/api', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -126,6 +156,10 @@
             .catch(error => {
                 console.error('Chyba při ukládání dat na API:', error);
             });
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
         }
     </script>
 </body>
