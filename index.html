@@ -25,6 +25,7 @@
             padding: 10px;
             margin: 10px;
             font-size: 16px;
+            width: auto;
         }
         button {
             padding: 10px 20px;
@@ -39,14 +40,23 @@
             background-color: #444444;
             color: #ffffff;
         }
+        .currency-option {
+            display: flex;
+            align-items: center;
+        }
+        .currency-option img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Měnové Kurzy</h1>
     <div>
         <input type="number" id="amount" placeholder="Zadejte částku" value="1">
-        <select id="from-currency"></select>
-        <select id="to-currency"></select>
+        <select id="from-currency" onchange="updateLiveRates()"></select>
+        <select id="to-currency" onchange="updateLiveRates()"></select>
         <button onclick="convertCurrency()">Převést</button>
         <button onclick="toggleDarkMode()">Přepnout Dark Mode</button>
     </div>
@@ -59,15 +69,26 @@
     </div>
     <script>
         const apiID = 'b39fe9774492795a9842189e';
-        const url = `https://v6.exchangerate-api.com/v6/${apiID}/latest/USD`;
         let exchangeRates = {};
+        const flags = {
+            "USD": "https://flagcdn.com/us.svg",
+            "EUR": "https://flagcdn.com/eu.svg",
+            "CZK": "https://flagcdn.com/cz.svg",
+            // Přidejte další měny a jejich vlajky zde
+        };
+        const symbols = {
+            "USD": "$",
+            "EUR": "€",
+            "CZK": "Kč",
+            // Přidejte další měny a jejich symboly zde
+        };
 
         document.addEventListener('DOMContentLoaded', function() {
-            fetchExchangeRates();
-            setInterval(fetchExchangeRates, 5000);  // Aktualizace každých 5 sekund
+            fetchExchangeRates('USD');  // Načteme data pro výchozí měnu (USD)
         });
 
-        function fetchExchangeRates() {
+        function fetchExchangeRates(baseCurrency) {
+            const url = `https://v6.exchangerate-api.com/v6/${apiID}/latest/${baseCurrency}`;
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
@@ -93,12 +114,12 @@
             for (const currency in exchangeRates) {
                 const optionFrom = document.createElement('option');
                 optionFrom.value = currency;
-                optionFrom.text = currency;
+                optionFrom.innerHTML = `<div class="currency-option"><img src="${flags[currency]}" alt="${currency} flag"> ${currency} (${symbols[currency]})</div>`;
                 fromCurrency.add(optionFrom);
 
                 const optionTo = document.createElement('option');
                 optionTo.value = currency;
-                optionTo.text = currency;
+                optionTo.innerHTML = `<div class="currency-option"><img src="${flags[currency]}" alt="${currency} flag"> ${currency} (${symbols[currency]})</div>`;
                 toCurrency.add(optionTo);
             }
             fromCurrency.value = 'USD';
@@ -106,12 +127,16 @@
         }
 
         function updateLiveRates() {
-            const liveRatesDiv = document.getElementById('live-rates');
-            let html = '<h2>Live Kurzy</h2>';
-            for (const currency in exchangeRates) {
-                html += `<p>1 USD = ${exchangeRates[currency]} ${currency}</p>`;
+            const fromCurrency = document.getElementById('from-currency').value;
+            const toCurrency = document.getElementById('to-currency').value;
+            if (exchangeRates) {
+                const liveRatesDiv = document.getElementById('live-rates');
+                let html = `<h2>Live Kurzy (${fromCurrency})</h2>`;
+                for (const currency in exchangeRates) {
+                    html += `<p>1 ${fromCurrency} = ${(exchangeRates[currency] / exchangeRates[fromCurrency]).toFixed(4)} ${currency}</p>`;
+                }
+                liveRatesDiv.innerHTML = html;
             }
-            liveRatesDiv.innerHTML = html;
         }
 
         function convertCurrency() {
